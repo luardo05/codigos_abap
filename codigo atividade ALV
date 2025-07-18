@@ -1,0 +1,152 @@
+DATA: lt_pedido TYPE STANDARD TABLE OF ty_pedido, "Tabela interna
+      ls_pedido TYPE ty_pedido.                   "Estrutura de impressão
+
+
+SELECT-OPTIONS: so_ebeln FOR ekko-ebeln OBLIGATORY,
+                so_ebelp FOR ekpo-ebelp. "Entrada
+
+
+CLASS exercicio DEFINITION.
+  PUBLIC SECTION.
+    DATA: lt_items        TYPE STANDARD TABLE OF bapiekpo,   "EBELN, EBELP E BSTMG
+          lt_item_texts   TYPE STANDARD TABLE OF bapiekpotx, "TEXTO DE ITENS (text_line - Textos do Item)
+          lt_header_texts TYPE STANDARD TABLE OF bapiekkotx. "TEXTO DE CABEÇALHO (text_line - Abobrinha seca)
+
+    METHODS: carregar,
+             validar,
+             imprimir.
+ENDCLASS.
+
+
+CLASS exercicio IMPLEMENTATION.
+
+  METHOD carregar.
+
+    "Buscar todos os pedidos dentro do intervalo informado
+    SELECT ebeln
+      FROM ekko
+      INTO TABLE @DATA(lt_ekko) "Definindo uma nova tabela interna
+      WHERE ebeln IN @so_ebeln.
+
+    LOOP AT lt_ekko INTO DATA(ls_ekko). "Usando a nova tabela interna e rodando numa nova estrutura
+
+      CALL FUNCTION 'BAPI_PO_GETDETAIL'
+        EXPORTING
+          purchaseorder   = ls_ekko-ebeln
+          items           = 'X'
+          item_texts      = 'X'
+          header_texts    = 'X'
+        TABLES
+          po_items        = lt_items "Tabelas internas que defini anteriormente
+          po_item_texts   = lt_item_texts
+          po_header_texts = lt_header_texts.
+
+      LOOP AT lt_items INTO DATA(ls_item). "Loop para encontrar os itens
+
+        IF NOT so_ebelp[] IS INITIAL AND ls_item-po_item NOT IN so_ebelp.
+          CONTINUE. "Processar os itens de acordo com o range que eu definir no select-options ou passa todos
+        ENDIF.
+
+        DATA(lv_ebeln) = ls_item-po_number.
+        DATA(lv_ebelp) = ls_item-po_item.
+
+        LOOP AT lt_item_texts INTO DATA(ls_item_texts) "Buscar textos de item (pode ter várias linhas)
+             WHERE po_number = lv_ebeln AND po_item = lv_ebelp.
+
+          ls_pedido-ebeln = lv_ebeln.
+          ls_pedido-ebelp = lv_ebelp.
+          ls_pedido-bstmg = ls_item-quantity.
+          ls_pedido-itemt = ls_item_texts-text_line.
+
+          "Pega o texto de cabeçalho (primeira linha apenas - abobrinha seca)
+          READ TABLE lt_header_texts INTO DATA(ls_header_texts)
+               WITH KEY po_number = lv_ebeln.
+
+          IF sy-subrc = 0.
+            ls_pedido-headt = ls_header_texts-text_line.
+          ENDIF.
+
+          APPEND ls_pedido TO lt_pedido.
+
+        ENDLOOP.
+
+        "Caso o item não tenha nenhum texto (linha sem texto), ainda assim precisa aparecer mesmo em branco.
+        IF sy-subrc <> 0.
+          CLEAR ls_pedido.
+          ls_pedido-ebeln = lv_ebeln.
+          ls_pedido-ebelp = lv_ebelp.
+          ls_pedido-bstmg = ls_item-quantity.
+
+          READ TABLE lt_header_texts INTO ls_header_texts WITH KEY po_number = lv_ebeln.
+          IF sy-subrc = 0.
+            ls_pedido-headt = ls_header_texts-text_line.
+          ENDIF.
+
+          APPEND ls_pedido TO lt_pedido.
+        ENDIF.
+      ENDLOOP.
+    ENDLOOP.
+
+  ENDMETHOD.
+
+  METHOD validar.
+    IF lt_pedido IS INITIAL.
+      MESSAGE 'Nenhum item carregado...' TYPE 'E'.
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD imprimir.
+    DATA: gr_alv  TYPE REF TO cl_salv_table,
+          gr_func TYPE REF TO cl_salv_functions_list,
+          gr_disp TYPE REF TO cl_salv_display_settings.
+
+    TRY.
+        cl_salv_table=>factory(
+          IMPORTING
+            r_salv_table = gr_alv
+          CHANGING
+            t_table      = lt_pedido ).
+
+        gr_func = gr_alv->get_functions( ).
+        gr_func->set_all( abap_true ).
+
+        gr_disp = gr_alv->get_display_settings( ).
+        gr_disp->set_list_header( 'Relatório de Pedidos e Itens com Textos' ).
+        gr_disp->set_striped_pattern( abap_true ).
+
+        gr_alv->get_columns( )->get_column( 'EBELN' )->set_long_text( 'Código de Pedido' ).
+        gr_alv->get_columns( )->get_column( 'EBELN' )->set_medium_text( 'Pedido' ).
+        gr_alv->get_columns( )->get_column( 'EBELN' )->set_short_text( 'Cod.' ).
+
+        gr_alv->get_columns( )->get_column( 'EBELP' )->set_long_text( 'Item' ).
+        gr_alv->get_columns( )->get_column( 'EBELP' )->set_medium_text( 'Item' ).
+        gr_alv->get_columns( )->get_column( 'EBELP' )->set_short_text( 'Item' ).
+
+        gr_alv->get_columns( )->get_column( 'BSTMG' )->set_long_text( 'Quantidade do Item' ).
+        gr_alv->get_columns( )->get_column( 'BSTMG' )->set_medium_text( 'Qtd. Item' ).
+        gr_alv->get_columns( )->get_column( 'BSTMG' )->set_short_text( 'Qtd.' ).
+
+        gr_alv->get_columns( )->get_column( 'HEADT' )->set_long_text( 'Cabeçalho' ).
+        gr_alv->get_columns( )->get_column( 'HEADT' )->set_medium_text( 'Cabeçalho' ).
+        gr_alv->get_columns( )->get_column( 'HEADT' )->set_short_text( 'Header' ).
+
+        gr_alv->get_columns( )->get_column( 'ITEMT' )->set_long_text( 'Texto do Item' ).
+        gr_alv->get_columns( )->get_column( 'ITEMT' )->set_medium_text( 'Texto Item' ).
+        gr_alv->get_columns( )->get_column( 'ITEMT' )->set_short_text( 'Texto' ).
+
+        gr_alv->display( ).
+
+      CATCH cx_salv_msg INTO DATA(lx_salv).
+        MESSAGE lx_salv->get_text( ) TYPE 'E'.
+
+    ENDTRY.
+  ENDMETHOD.
+ENDCLASS.
+
+
+START-OF-SELECTION.
+  DATA(lo_exec) = NEW exercicio( ).
+  lo_exec->carregar( ).
+  lo_exec->validar( ).
+  lo_exec->imprimir( ).
+
