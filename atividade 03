@@ -1,0 +1,48 @@
+REPORT za06_at3.
+TABLES: ekko, ekpo.
+
+*Vamos curar um tipo de estrutura com os campos de pedido, item do pedido e quantidade do item
+* do pedido. A referência pra isso está na EKKO, pra pedido e EKPO pra item do pedido. Usem a instrução TYPES.
+
+TYPES:
+  BEGIN OF ty_meu,
+    cod_ped  TYPE ebeln,
+    cod_item TYPE ebelp,
+    quant    TYPE bstmg,
+  END OF ty_meu.
+
+*Definam 2 variaveis 1 do tipo tabela e a outra do tipo esturtura a partir desse tipo previamente criado.
+DATA:
+  lt_tab   TYPE TABLE OF ty_meu,
+  ls_tab   TYPE ty_meu,
+  lv_found TYPE ekpo-ebelp.
+
+* Agora vamos defirnir duas entradas de tela, uma para o campo pedido, sendo a mesma no formato de range e
+*uma pra o item do pedido também com range.
+SELECT-OPTIONS: so_ped FOR ekko-ebeln OBLIGATORY.
+SELECT-OPTIONS: so_item FOR ekpo-ebelp.
+
+IF so_ped IS INITIAL.
+  MESSAGE 'Tá errado' TYPE 'E'.
+ENDIF.
+
+*faça uma rotina de validação para o conjunto de pedido/item.
+*Caso não exista vamos emitir uma menssagem de erro, usando o comando message, e vamos para a execução
+SELECT ebeln, ebelp, menge
+ FROM ekpo
+ INTO TABLE @lt_tab
+ WHERE ebeln IN @so_ped AND ebelp IN @so_item.
+
+IF lt_tab IS INITIAL.
+  MESSAGE 'informe um numero de pedido valido' TYPE 'I'.
+  EXIT.
+ELSE.
+  WRITE: 'Lista de itens do pedido', so_ped+3(10),':'.
+  skip 2.
+  LOOP AT lt_tab INTO ls_tab.
+    WRITE: / 'Numero do pedido: ', ls_tab-cod_ped,
+           /  'Codigo do item: ', ls_tab-cod_item,
+           /  'Quantidade do item:', ls_tab-quant.
+    SKIP 2.
+  ENDLOOP.
+ENDIF.
