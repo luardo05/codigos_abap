@@ -1,0 +1,19 @@
+REPORT zaluno06poo.
+
+TABLES: vbak.
+
+select-OPTIONS: so_vbeln FOR vbak-vbeln NO INTERVALS.
+
+INCLUDE zaluno06vg.
+
+INCLUDE zaluno06oo.
+
+START-OF-SELECTION.
+
+  DATA(lo_pedido) = NEW lcl_pedido_reader( ).
+  lo_pedido->carregar_pedidos( ).
+  lo_pedido->exibir_pedidos( ).
+
+  CALL FUNCTION 'ZALUNO06_E'
+    EXPORTING
+      teste         = gt_pedido.
