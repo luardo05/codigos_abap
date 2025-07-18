@@ -1,0 +1,42 @@
+REPORT ZALUNO06_PRINT.
+
+write 'Hello world!'.
+skip 2. "Pula duas linhas".
+write 'Eu sei ABAP!'.
+
+
+"=========================================="
+
+
+"PARAMETERS p_Nome TYPE char20. "Forma de input"
+"PARAMETERS p_idade TYPE int2.
+
+"WRITE / p_nome. "imprime o valor da variavel"
+"WRITE / p_idade.
+"Skip 2.
+
+"WRITE 'Meu nome é: ' && p_Nome && ' e minha idade é:' && p_idade.
+"WRITE 'Meu nome é: ', / Nome."
+"WRITE 'A minha idade é: ', / idade."
+
+"=========================================="
+
+CLASS demo DEFINITION.
+  PUBLIC SECTION.
+    CLASS-METHODS main.
+ENDCLASS.
+CLASS demo IMPLEMENTATION.
+  METHOD main.
+      DATA carrier TYPE scarr.
+      carrier-carrid = 'UA'.
+      cl_demo_input=>request( CHANGING field = carrier-carrid ).
+      SELECT SINGLE *
+        FROM scarr
+        INTO carrier
+        WHERE carrid = carrier-carrid.
+      cl_demo_output=>display( carrier ).
+    ENDMETHOD.
+ENDCLASS.
+
+START-OF-SELECTION.
+  demo=>main( ).
