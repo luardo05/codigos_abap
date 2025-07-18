@@ -1,0 +1,42 @@
+REPORT zaluno06.
+TABLES: proj, prps.
+
+DATA: ti_proj TYPE zaluno06_projd,
+      ti_item TYPE zaluno06_ptind,
+      s_proj  TYPE zaluno06_projt,
+      s_item  TYPE zaluno06_ptint.
+
+
+SELECT-OPTIONS ti_prjin FOR proj-pspnr  no-EXTENSION.
+SELECT-OPTIONS ti_itnin FOR prps-psphi no-EXTENSION.
+
+*
+*PARAMETERS so_proj TYPE proj-pspnr.
+*PARAMETERS so_item TYPE prps-psphi.
+*
+*SELECT FROM proj
+*
+*  FIELDS pspnr, pspid
+*  WHERE pspnr = @so_proj
+*  INTO TABLE @FINAL(result).
+*
+*IF RESULT[] is not initial.
+*  SELECT FROM prps
+*    FIELDS pspnr, psphi
+*    FOR ALL ENTRIES IN @result
+*    WHERE psphi = @result-pspnr
+*    INTO TABLE @FINAL(result2).
+*ENDIF.
+**&Sct-OPTIONS p_matnr FOR mara-matnr no INTERVALS no-EXTENSION OBLIGATORY.ele
+*
+*cl_demo_output=>display( result ).
+*cl_demo_output=>display( result2 ).
+
+CALL FUNCTION 'ZTESTEASM'
+  EXPORTING
+    i_proj        =  ti_prjin
+    i_pep         =  ti_itnin
+ IMPORTING
+   TI_PROJ       =   ti_proj
+   TI_ITEM       =   ti_item
+          .
