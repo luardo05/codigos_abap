@@ -1,0 +1,152 @@
+*&---------------------------------------------------------------------*
+*& Report ZALUNO1925_PROG3
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT ZALUNO1925_PROG3.
+
+INCLUDE ZALUNO1925_PROG3_VAR.
+INCLUDE ZALUNO1925_PROG3_TELA.
+INCLUDE ZALUNO1925_PROG3_CLASS.
+
+START-OF-SELECTION.
+
+*A SEGUIR INSTANCIAMOS A CLASSE, PUXANDO OS METODOS
+DATA(prog3) = NEW lc_prog3( ).
+prog3->get_conteudo( ).
+prog3->show_conteudo( ).
+
+------------------------------------------------------------------------------------------------
+
+*&---------------------------------------------------------------------*
+*& Include          ZALUNO1925_PROG3_VAR
+*&---------------------------------------------------------------------*
+DATA: gt_vendas TYPE ZALUNO19_TIPOTAB_PROG3,
+      gs_vendas TYPE ZALUNO19_ESTRUTURA_PROG3.
+
+
+------------------------------------------------------------------------------------------------
+
+*&---------------------------------------------------------------------*
+*& Include          ZALUNO1925_PROG3_TELA
+*&---------------------------------------------------------------------*
+TABLES VBAK.
+
+SELECT-OPTIONS so_vbeln FOR vbak-vbeln OBLIGATORY.
+
+
+------------------------------------------------------------------------------------------------
+
+
+*&---------------------------------------------------------------------*
+*& Include          ZALUNO1925_PROG3_CLASS
+*&---------------------------------------------------------------------*
+
+CLASS lc_prog3 DEFINITION.
+  PUBLIC SECTION.
+    DATA: cl_alv TYPE REF TO cl_salv_table.
+    METHODS: get_conteudo, show_conteudo.
+
+ENDCLASS.
+
+CLASS lc_prog3 IMPLEMENTATION.
+  METHOD: get_conteudo.
+    DATA: batatinha TYPE zaluno19_tipotab_prog3.
+
+*    SELECT vbak~vbeln AS doc_vendas,
+*           vbak~audat AS data_docvendas,
+*           vbak~auart AS tipo_docvendas,
+*           vbak~vkorg AS org_vendas,
+*           vbak~vtweg AS can_vendas,
+*           vbak~spart AS set_vendas,
+*           vbap~posnr AS item_docvendas,
+*           vbap~charg AS num_lote,
+*           vbpa~parvw AS func_parc,
+*           vbpa~kunnr AS num_cliente
+*      FROM vbak
+*        INNER JOIN vbap
+*      ON vbak~vbeln = vbap~vbeln
+*        LEFT JOIN vbpa
+*      ON vbak~vbeln = vbpa~vbeln AND vbpa~posnr = '00000'
+*      WHERE vbak~vbeln IN @so_vbeln INTO TABLE @gt_vendas.
+
+DATA: lt_vbeln TYPE rseloption.
+
+CALL FUNCTION 'ZALUNO1925_PROG3_FUNC1'
+  EXPORTING
+    lt_vbeln       = so_vbeln[] "para reconhecer como tabela
+ IMPORTING
+   TABELA         = gt_vendas
+          .
+
+
+
+
+
+
+  ENDMETHOD.
+
+  METHOD: show_conteudo.
+
+            cl_salv_table=>factory(
+        IMPORTING
+          r_salv_table = cl_alv
+        CHANGING
+          t_table      = gt_vendas
+      ).
+            cl_alv->display( ).
+
+                 " Definir títulos das colunas
+      cl_alv->get_columns( )->get_column( 'DOC_VENDAS' ).
+      cl_alv->get_columns( )->get_column( 'DATA_DOCVENDAS' ).
+      cl_alv->get_columns( )->get_column( 'TIPO_DOCVENDAS' ).
+      cl_alv->get_columns( )->get_column( 'ORG_VENDAS' ).
+      cl_alv->get_columns( )->get_column( 'CAN_VENDAS' ).
+      cl_alv->get_columns( )->get_column( 'SET_VENDAS' ).
+      cl_alv->get_columns( )->get_column( 'ITEM_DOCVENDAS' ).
+      cl_alv->get_columns( )->get_column( 'NUM_LOTE' ).
+      cl_alv->get_columns( )->get_column( 'FUNC_PARC' ).
+      cl_alv->get_columns( )->get_column( 'NUM_CLIENTE' ).
+
+
+  ENDMETHOD.
+
+
+
+ENDCLASS.
+
+-----------------------------------------------------------------------------------------
+
+FUNCTION ZALUNO1925_PROG3_FUNC1.
+*"----------------------------------------------------------------------
+*"*"Interface local:
+*"  IMPORTING
+*"     REFERENCE(LT_VBELN) TYPE  STANDARD TABLE
+*"  EXPORTING
+*"     REFERENCE(TABELA) TYPE  ZALUNO19_TIPOTAB_PROG3
+*"----------------------------------------------------------------------
+
+TABLES: VBAK, VBAP, VBPA.
+
+      SELECT vbak~vbeln AS doc_vendas,
+           vbak~audat AS data_docvendas,
+           vbak~auart AS tipo_docvendas,
+           vbak~vkorg AS org_vendas,
+           vbak~vtweg AS can_vendas,
+           vbak~spart AS set_vendas,
+           vbap~posnr AS item_docvendas,
+           vbap~charg AS num_lote,
+           vbpa~parvw AS func_parc,
+           vbpa~kunnr AS num_cliente
+      FROM vbak
+        INNER JOIN vbap
+      ON vbak~vbeln = vbap~vbeln
+        LEFT JOIN vbpa
+      ON vbak~vbeln = vbpa~vbeln AND vbpa~posnr = '000000'
+      WHERE vbak~vbeln IN @LT_VBELN INTO TABLE @TABELA.
+
+
+
+
+
+ENDFUNCTION.
